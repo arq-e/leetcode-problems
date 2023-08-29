@@ -1,0 +1,97 @@
+class Solution {
+    public int[] sortItems(int n, int m, int[] group, List<List<Integer>> beforeItems) {
+        if (n == 1) return new int[]{0};
+        for (int i = 0; i < n; ++i) {
+            if (group[i] == -1) {
+                group[i] = m;
+                ++m;
+            }
+        }
+        int[] beforeGroups = new int[m];
+        Map<Integer, Map<Integer, Integer>> beforeSameGroup = new HashMap<>();
+        Map<Integer, Set<Integer>> dependentGroups = new HashMap<>();
+        Map<Integer, Set<Integer>> dependentItems = new HashMap<>();
+        for (int i = 0; i < m; ++i) {
+            beforeSameGroup.put(i, new HashMap<>());
+            //dependentGroups.put(i, new HashSet<>());
+        }
+        for (int i = 0;  i < n; ++i) {
+            dependentItems.put(i, new HashSet<>());
+            beforeSameGroup.get(group[i]).put(i, 0);
+        }
+        for (int i = 0; i < n; ++i) {
+            int k = 0;
+            for (int j : beforeItems.get(i)) {
+                if (group[i] != group[j]) {
+                    if (!dependentGroups.containsKey(group[j]))
+                        dependentGroups.put(group[j], new HashSet<>());
+                    else if (dependentGroups.get(group[j]).contains(group[i])) break;
+                    ++beforeGroups[group[i]];
+
+                    dependentGroups.get(group[j]).add(group[i]);
+                } else if (group[i] == group[j]){
+                    Map<Integer, Integer> map = beforeSameGroup.get(group[i]);
+                    dependentItems.get(j).add(i);
+                    map.put(i, map.get(i) + 1);
+                }
+            }
+        }
+        Deque<Integer> deque = new ArrayDeque<>();
+        Set<Integer> visited = new HashSet<>();
+        for (int i = 0; i < m; ++i) {
+            if (beforeGroups[i] == 0) {
+                if (beforeSameGroup.get(i).size() != 0) {
+                    deque.add(i);
+                    visited.add(i);
+                }
+            }
+        }
+
+        if (deque.size() == 0) return new int[0];
+        int[] res = new int[n];
+        Arrays.fill(res, -1);
+        int pos = 0;
+        while(deque.size() > 0) {
+            int curr = deque.pollFirst();
+            pos = findInGroupOrder(beforeSameGroup.get(curr),dependentItems, res, pos);
+            if (pos == -1) break;
+            if (dependentGroups.containsKey(curr)) {
+                for(int i : dependentGroups.get(curr)) {
+                    if (!visited.contains(i)) {
+                        --beforeGroups[i];
+                        if (beforeGroups[i] == 0) {
+                            deque.add(i);
+                            visited.add(i);
+                        }
+                    }
+                }
+            }
+        }
+        return pos == n ? res : new int[0];
+    }
+
+    public int findInGroupOrder(Map<Integer, Integer> beforeItems,
+            Map<Integer, Set<Integer>> dependant, int[] res, int pos) {
+
+        Deque<Integer> deque = new ArrayDeque<>();
+        for (int i : beforeItems.keySet()) {
+            if (beforeItems.get(i) == 0) {
+                deque.add(i);
+            }
+        }
+        if (deque.size() == 0) return -1;
+        int k = 0;
+        while (deque.size() > 0) {
+            int curr = deque.pollFirst();
+            res[pos+k++] = curr;
+            for (int val : dependant.get(curr)) {
+                beforeItems.put(val, beforeItems.get(val) -1);
+                if (beforeItems.get(val) == 0) {
+                    deque.add(val);
+                }
+            }
+        }
+        if (k == beforeItems.size()) return pos + k;
+        else return -1;
+    }
+}
